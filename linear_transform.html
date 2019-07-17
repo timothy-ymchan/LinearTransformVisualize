@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title> Linear Transformation </title>
+    <style>
+      table,td {
+        border: 1px solid black;
+      }
+    </style>
+  </head>
+
+  <body>
+    <h3> Linear Transformation </h3>
+    <table>
+      <tr>
+        <td><input type="text" id="0" value="1"></td>
+        <td><input type="text" id="1" value="0"></td>
+      </tr>
+      <tr>
+        <td><input type="text" id="2" value="0"></td>
+        <td><input type="text" id="3" value="1"></td>
+      </tr>
+    </table>
+    <br>
+    <canvas class="myCanvas" width = "400" height="400">
+      Browser does not support canvas
+    </canvas>
+    <br>
+    <input type="range" min="0" max="100" value="0" id="progress"> <br>
+    <input type="checkbox" id="show_det"> Visualize determinant
+
+    <script>
+      /* Initialization */
+      var canvas = document.querySelector('.myCanvas');
+      var ctx = canvas.getContext('2d');
+      var width = canvas.width;
+      var height = canvas.height;
+      var matrix = new Array(4);
+      matrix_getval();
+
+      /* Main Loop*/
+      setInterval(loop,25);
+
+      /* Function Definition */
+      function matrix_getval(){
+        for(var i=0 ;i<matrix.length;i++){
+          var cell = document.getElementById(i);
+          if(isNaN(cell.value))
+            return;
+          matrix[i] = cell.value;
+        }
+      }
+
+      function draw_grid(m){
+        ctx.strokeRect(0,0,width,height);
+
+        var grid_wDivide = 10;
+        var grid_hDivide = 10;
+        var grid_width = Math.floor(width / grid_wDivide);
+        var grid_height = Math.floor(height / grid_hDivide);
+
+        ctx.setTransform(m[0],-m[2],m[1],-m[3],width/2,height/2);
+        console.log(grid_height);
+        for(var i = 0; i < grid_wDivide ; i++){
+          for(var j = 0; j < grid_hDivide; j++){
+            ctx.strokeRect(i*grid_width-width/2,j*grid_height-height/2,grid_width,grid_height);
+          }
+        }
+        ctx.setTransform(1,0,0,1,0,0);
+      }
+
+      function draw_arrow(x0,y0,x1,y1)
+      {
+        ctx.save();
+        ctx.lineWidth = 3;
+
+        var angle = Math.atan2(y1-y0,x1-x0);
+        var len = Math.sqrt((x1-x0)*(x1-x0) + (y1-y0)*(y1-y0));
+        var tri_len = 10;
+
+        ctx.rotate(-angle);
+
+        ctx.beginPath();
+        ctx.moveTo(0,0);
+        ctx.lineTo(len- tri_len*Math.cos(Math.PI/6),0);
+        ctx.stroke();
+
+
+        ctx.beginPath();
+        ctx.moveTo(len,0);
+        ctx.lineTo(len - tri_len*Math.cos(Math.PI/6),tri_len*Math.sin(Math.PI/6));
+        ctx.lineTo(len - tri_len*Math.cos(Math.PI/6),-tri_len*Math.sin(Math.PI/6));
+        ctx.fill();
+
+        ctx.restore();
+      }
+
+      function map(val, fromLow, fromHigh, toLow, toHigh){
+        return (val-fromLow)*(toHigh-toLow)/(fromHigh-fromLow) + toLow;
+      }
+
+      function matrix_multiply2D(m,vect){
+        return [vect[0]*m[0] + vect[1]*m[1], vect[0]*m[2] + vect[1]*m[3]];
+      }
+
+      function matrix_det2D(m){
+        return m[0]*m[3]-m[1]*m[2];
+      }
+
+
+      function loop(){
+
+        /*Reset Coordinate*/
+        ctx.setTransform(1,0,0,1,0,0);
+
+        /*Clear Screen*/
+        ctx.clearRect(0,0,width,height);
+
+        /*Draw original grid */
+        ctx.strokeStyle = 'rgb(220,220,220)';
+        draw_grid([1,0,0,1]);
+
+        /*Update matrix & Calculate position of new vectors*/
+        matrix_getval();
+        //console.log(matrix);
+        var slideProgress = document.getElementById('progress').value/100.0;
+        var intermediate_matrix = new Array(4);
+        intermediate_matrix[0] = map(slideProgress,0,1,1,matrix[0]);
+        intermediate_matrix[1] = map(slideProgress,0,1,0,matrix[1]);
+        intermediate_matrix[2] = map(slideProgress,0,1,0,matrix[2]);
+        intermediate_matrix[3] = map(slideProgress,0,1,1,matrix[3]);
+
+        var new_i = matrix_multiply2D(intermediate_matrix,[40,0]);
+        var new_j = matrix_multiply2D(intermediate_matrix,[0,40]);
+
+        /* Draw transformed grid */
+        ctx.strokeStyle = 'rgb(192,192,192)';
+        draw_grid(intermediate_matrix);
+
+        /* Draw determinant rect*/
+        var is_show_det = document.getElementById('show_det').checked;
+        if(is_show_det){
+          ctx.strokeStyle = 'rgb(255,215,0)';
+          if(matrix_det2D(intermediate_matrix) >= 0)
+            ctx.fillStyle = 'rgba(255,215,0,0.2)';
+          else
+            ctx.fillStyle = 'rgba(255,153,0,0.2)';
+          ctx.setTransform(1,0,0,1,width/2,height/2);
+          ctx.beginPath();
+          ctx.moveTo(0,0);
+          ctx.lineTo(new_i[0],-new_i[1]);
+          ctx.lineTo(new_i[0]+new_j[0],-new_i[1]-new_j[1]);
+          ctx.lineTo(new_j[0],-new_j[1]);
+          ctx.stroke();
+          ctx.fill();
+        }
+
+        /* Draw transformed unit vector */
+        ctx.setTransform(1,0,0,1,width/2,height/2);
+        //Draw i vector
+        ctx.strokeStyle = 'rgb(0,206,209)';
+        ctx.fillStyle = 'rgb(0,206,209)';
+        draw_arrow(0,0,new_i[0],new_i[1]);
+
+        //Draw j vector
+        ctx.strokeStyle = 'rgb(255,165,0)';
+        ctx.fillStyle = 'rgb(255,165,0)';
+        draw_arrow(0,0,new_j[0],new_j[1]);
+
+      }
+
+    </script>
+  </body>
+
+</html>
